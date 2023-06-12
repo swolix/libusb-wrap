@@ -27,22 +27,47 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <dlfcn.h>
 #include <libusb-1.0/libusb.h>
 
-bool keep(libusb_device *device) {
+static bool keep(libusb_device *device) {
+    bool ret = true;
     struct libusb_device_descriptor desc;
     libusb_get_device_descriptor(device, &desc);
     uint8_t port = libusb_get_port_number(device); 
     uint8_t bus = libusb_get_bus_number(device);
     uint8_t address = libusb_get_device_address(device);
-    // if (desc->idVendor == 0x0c45 && desc->idProduct == 0x670c) {
-    //     fprintf(stderr, "REMOVING DEVICE: %04x:%04x\n", desc->idVendor, desc->idProduct);
-    //     return false;
-    // }
-    fprintf(stderr, "DEVICE: idVendor=%04x, idProduct=%04x SerialNumber=%d, Port=%d, Bus=%d, Address=%d\n", 
-            desc.idVendor, desc.idProduct, desc.iSerialNumber, port, bus, address);
-    return true;
+
+    char *include_bus = getenv("LIBUSB_WRAP_INCLUDE_BUS");
+    if (include_bus && bus != strtoul(include_bus, NULL, 0)) ret = false;
+
+    char *include_address = getenv("LIBUSB_WRAP_INCLUDE_ADDRESS");
+    if (include_address && address != strtoul(include_address, NULL, 0)) ret = false;
+
+    char *include_port = getenv("LIBUSB_WRAP_INCLUDE_PORT");
+    if (include_port && port != strtoul(include_port, NULL, 0)) ret = false;
+
+    char *include_vendor_id = getenv("LIBUSB_WRAP_INCLUDE_VENDOR_ID");
+    if (include_vendor_id && desc.idVendor != strtoul(include_vendor_id, NULL, 0)) ret = false;
+
+    char *include_product_id = getenv("LIBUSB_WRAP_INCLUDE_PRODUCT_ID");
+    if (include_product_id && desc.idProduct != strtoul(include_product_id, NULL, 0)) ret = false;
+
+    char *include_serial = getenv("LIBUSB_WRAP_INCLUDE_SERIAL");
+    if (include_serial && desc.iSerialNumber != strtoul(include_serial, NULL, 0)) ret = false;
+
+    if (getenv("LIBUSB_WRAP_DEBUG")) {
+        fprintf(stderr, "[libusb-wrap] idVendor=0x%04x, idProduct=0x%04x SerialNumber=%d, Port=%d, Bus=%d, Address=%d",
+                desc.idVendor, desc.idProduct, desc.iSerialNumber, port, bus, address);
+        if (ret) {
+            fprintf(stderr, " => keep\n");
+        } else {
+            fprintf(stderr, " => drop\n");
+        }
+    }
+
+    return ret;
 }
 
 ssize_t libusb_get_device_list(libusb_context *ctx,	libusb_device ***list) {
