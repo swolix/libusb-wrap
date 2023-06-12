@@ -71,7 +71,7 @@ static bool keep(libusb_device *device) {
 }
 
 ssize_t libusb_get_device_list(libusb_context *ctx,	libusb_device ***list) {
-    void *libusb = dlopen("/usr/lib/libusb-1.0.so", RTLD_NOW | RTLD_LOCAL);
+    void *libusb = dlopen("libusb-1.0.so", RTLD_NOW | RTLD_LOCAL);
     if (!libusb) {
         fprintf(stderr, "[libusb-wrap] Could not open libusb\n");
         return 0;
